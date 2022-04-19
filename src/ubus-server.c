@@ -17,7 +17,10 @@ static int ering_handler( struct ubus_context *ctx, struct ubus_object *obj,
 			  struct ubus_request_data *req, const char *method,
 			  struct blob_attr *msg );
 
-/* Enum for EGI policy order */
+static int repair_handler( struct ubus_context *ctx, struct ubus_object *obj,
+			  struct ubus_request_data *req, const char *method,
+			  struct blob_attr *msg );
+
 enum {
 	ERING_ID,
 	ERING_DATA,
@@ -33,10 +36,15 @@ static const struct blobmsg_policy ering_policy[] =
 	[ERING_MSG] = { .name="msg", .type=BLOBMSG_TYPE_STRING },
 };
 
+static const struct blobmsg_policy repair_policy[] =
+{
+};
+
 /* Ubus Methods */
 static const struct ubus_method ering_methods[] =
 {
 	UBUS_METHOD("ering_method", ering_handler, ering_policy),
+	UBUS_METHOD("repair", repair_handler, repair_policy),
 };
 
 /* Ubus object type */
@@ -117,6 +125,30 @@ static int ering_handler( struct ubus_context *ctx, struct ubus_object *obj,
 	/* send a reply msg to the caller for information */
 	blob_buf_init(&bb, 0);
 	blobmsg_add_string(&bb,"Ering reply", "Request is being proceeded!");
+	ubus_send_reply(ctx, req, bb.head);
+
+	/* 	-----  reply results to the caller -----
+	 * NOTE: we may put proceeding job in a timeout task, just to speed up service response.
+	 */
+	ubus_defer_request(ctx, req, &req_data);
+	ubus_complete_deferred_request(ctx, req, UBUS_STATUS_OK);
+}
+
+static int repair_handler( struct ubus_context *ctx, struct ubus_object *obj,
+			  struct ubus_request_data *req, const char *method,
+			  struct blob_attr *msg )
+{
+	struct blob_attr *tb[__ERING_MAX]; /* for parsed attr */
+
+	/* Parse blob_msg from the caller to request policy */
+	blobmsg_parse(repair_policy, ARRAY_SIZE(repair_policy), tb, blob_data(msg), blob_len(msg));
+
+
+	/* Do some job here according to caller's request */
+
+	/* send a reply msg to the caller for information */
+	blob_buf_init(&bb, 0);
+	blobmsg_add_string(&bb, "Johnny msg", "repair");
 	ubus_send_reply(ctx, req, bb.head);
 
 	/* 	-----  reply results to the caller -----
